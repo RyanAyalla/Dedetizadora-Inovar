@@ -1,6 +1,7 @@
 import sqlite3
 import pandas as pd
 import os
+from datetime import datetime
 from Validacoes import validar_preco
 
 # O arquivo do banco precisa ser consultado com o final '.db'
@@ -39,15 +40,39 @@ def Dados_Servico():
                     break  # Sai do loop quando o preço está válido
         except ValueError:
             print('Valor inválido. Digite um valor válido para o preço.')
-
+            
+    while True:
+        try:
+            deseja_intervalo_repeticao = str(input('Deseja fixar um intervalo (Em Meses) para esse Serviço ser feito novamente? [s - n]\n')).upper()
+            
+            if deseja_intervalo_repeticao == 'S':
+                while True:
+                    try:
+                        Intervalo_Servico = int(input('Qual o intervalo em meses o Serviço deve ser feito novamente? (apenas numeros): \n'))
+                        if 1 <= Intervalo_Servico <= 12:
+                            break
+                        else:
+                            print("Digite um número entre 1 e 12.")
+                    except ValueError:
+                        print('Valor Inválido. Digite um número inteiro entre 1 e 12.')
+            
+            elif deseja_intervalo_repeticao == 'N':
+                Intervalo_Servico = None  # Define como None caso o usuário não queira um intervalo e será NULL no banco de dados
+                break
+            else:
+                print("Por favor, digite 's' ou 'n'.\n")
+            break
+        
+        except ValueError:
+            print("Valor inválido, tente novamente.")
+    
     # Inserindo os dados nas colunas da tabela
-    consulta = '''INSERT INTO Servico (Tipo, Descricao, Preco)
-                  VALUES (?, ?, ?)'''
+    consulta = '''INSERT INTO Servico (Tipo, Descricao, Preco, Intervalo_Servico)
+                  VALUES (?, ?, ?, ?)'''
 
     # As variáveis substituem os ? (placeholders) na consulta SQL
-    cursor.execute(consulta, (Tipo, Descricao, preco))
+    cursor.execute(consulta, (Tipo, Descricao, preco, Intervalo_Servico))
     conexao.commit()
-    
     
 def mostrar_dados_servico():
     while True:
@@ -73,7 +98,7 @@ def mostrar_dados_servico():
         if dados:
             print("Dados de Serviços")
             for linha in dados:
-                print(f'ID_Servico: {linha[0]}, Tipo: {linha[1]}, Descrição: {linha[2]}, Preço: {linha[3]}')
+                print(f'ID_Servico: {linha[0]}, Tipo: {linha[1]}, Descrição: {linha[2]}, Preço: {linha[3]}, Data do Serviço: {linha[4]}')
         else:
             print('Nenhum dado encontrado na Tabela Serviço')
 
@@ -86,7 +111,7 @@ def mostrar_dados_servico():
                 dados = cursor.fetchone()  # Recupera um serviço específico
                 
                 if dados:  
-                    print(f'ID_Servico: {dados[0]}, Tipo: {dados[1]}, Descrição: {dados[2]}, Preço: {dados[3]}')
+                    print(f'ID_Servico: {dados[0]}, Tipo: {dados[1]}, Descrição: {dados[2]}, Preço: {dados[3]}, Data do Serviço: {dados[4]}')
                     break 
 
                 else:
@@ -139,7 +164,7 @@ def menu_servico():
         try:
             escolha_servico = input('1. Cadastro de Serviços \n2. Pesquisar Serviços \n3. Excluir dados de Serviços \n4. Voltar ao Menu Anterior\n')
         
-            if escolha_servico.isdigit():
+            if escolha_servico.isdigit():       #verifica se a entrada só tem números
                 escolha_servico = int(escolha_servico)
             
             if escolha_servico == 1:
@@ -172,7 +197,7 @@ def exportar_dados_para_excel(dados, nome_arquivo):
     caminho_completo = os.path.join(caminho_diretorio, nome_arquivo)
     
     if isinstance(dados, list):  # se for uma lista, as colunas serão essas.
-        df = pd.DataFrame(dados, columns=['ID_Serviço', 'Tipo', 'Descrição', 'Preço'])   #df é o nome da variavel. DataFrame é a função que que organiza os dados em linhas e colunas
+        df = pd.DataFrame(dados, columns=['ID_Serviço', 'Tipo', 'Descrição', 'Preço'])   #df é o nome da variavel. pd é o Pandas, DataFrame é a função que organiza os dados em linhas e colunas
         #o segundo parametro é as colunas e os dados serão as linhas
     
     else:
@@ -183,4 +208,3 @@ def exportar_dados_para_excel(dados, nome_arquivo):
     # O parâmetro index=False impede que a coluna de índice seja salva no arquivo
     df.to_excel(caminho_completo, index=False)
     print(f"Dados exportados para '{caminho_completo}'")
-    
