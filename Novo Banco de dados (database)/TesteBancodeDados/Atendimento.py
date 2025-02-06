@@ -12,23 +12,28 @@ cursor = conexao.cursor()
 
 def Menu_Atendimento():
     while True:
-        try:
-            escolha_atendimento = int(input('1. Novo Atendimento \n2. Exportar dados para o Excel \n3. Menu Anterior \n'))
-                
+        escolha_atendimento = input('1. Novo Atendimento \n2. Atendimentos em Execução \n3. Atendimentos Concluídos \n4. Menu Anterior \n')
+        
+        if escolha_atendimento.isdigit():  # Verifica se a entrada é numérica
+            escolha_atendimento = int(escolha_atendimento)
+            
             if escolha_atendimento == 1:
                 Registrar_Atendimento()
                 
             elif escolha_atendimento == 2:
-                Exportar_Dados_Excel()
+                print("Atendimentos em Execução.")
             
             elif escolha_atendimento == 3:
-                return
+                print("Atendimentos Concluídos")
+            
+            elif escolha_atendimento == 4:
+                Exportar_Dados_Excel()
             
             else:
                 print('Opção Inválida')
-                
-        except ValueError:
+        else:
             print('Valor Inválido, tente novamente.')
+                
                 
 
 def Registrar_Atendimento():
@@ -87,40 +92,56 @@ def Registrar_Atendimento():
                     break  
         except ValueError:
             print('Valor inválido. Digite um valor válido para o preço.')
-            
+    
+    Execucao = 'Andamento'        
     # Inserir o atendimento com a data atual
     data_atendimento = datetime.now().strftime('%Y-%m-%d')
     
-    inserir_dados_atendimento = ''' INSERT INTO Atendimento (ID_Cliente, ID_Servico, Data, ID_Funcionario, Valor_Total) 
-                                    VALUES (?, ?, ?, ?, ?)
+    inserir_dados_atendimento = ''' INSERT INTO Atendimento (ID_Cliente, ID_Servico, Data, ID_Funcionario, Valor_Total, Execucao) 
+                                    VALUES (?, ?, ?, ?, ?, ?)
     
     '''
-    cursor.execute(inserir_dados_atendimento, (id_cliente, id_servico, data_atendimento, id_funcionario, preco_atendimento))
+    cursor.execute(inserir_dados_atendimento, (id_cliente, id_servico, data_atendimento, id_funcionario, preco_atendimento, Execucao))
     conexao.commit()
     
+    
+    
+    #AQUI VAMOS VERIFICAR SE O SERVIÇO TEM INTERVALO, SE ELE TIVER, IRA ADICIONAR A DATA ATUAL NA COLUNA (DATA_ULTIMO_ATENDIMENTO NO SQL)
+    cursor.execute('SELECT Intervalo_Servico FROM Servico WHERE ID_Servico = ?', (id_servico,))
+    consulta_intervalo = cursor.fetchone()
+    
+    #se tiver um intervalo, um UPDATE na coluna Data_Ultimo_Atendimento é feito, para que assim futuramente, a verificação com ela seja feita.
+    if consulta_intervalo and consulta_intervalo[0]: #consulta_intervalo[0] verifica se o valor do primeiro item da tupla retornada não é "false" (nulo, zero, etc.). 
+        consulta_data_atendimento = '''UPDATE Atendimento SET Data_Ultimo_Atendimento = ? WHERE ID_Servico = ?
+        '''
+        cursor.execute(consulta_data_atendimento, (data_atendimento, id_servico))
+        conexao.commit()
+        
+    conexao.close()
     
 def Exportar_Dados_Excel():
     
     while True:
-        #consultar todos os dados da tabela Atendimento
+        
         consulta = 'SELECT * FROM Atendimento'
         cursor.execute(consulta)
-        dados = cursor.fetchall() #retorna todos os dados se tiver
+        dados = cursor.fetchall() 
         
         if dados:
-            
             caminho_diretorio = r'C:\Users\Dev\Novo Banco de dados (database)\TesteBancodeDados\Planilhas'
             
-            if not os.path.exists(caminho_diretorio):  #função que verifica se algo existe 
-                os.makedirs(caminho_diretorio)  # Cria o diretório se ele não existir
+            if not os.path.exists(caminho_diretorio):  
+                os.makedirs(caminho_diretorio)  
             
             caminho_completo = os.path.join(caminho_diretorio, 'Dados_Atendimento.xlsx')
 
-            if isinstance(dados, list): #transforma os dados em lista
-                df = pd.DataFrame(dados, columns= ['ID_Atendimento', 'Cliente', 'Serviço', 'Data', 'Funcionário', 'Valor Total do Serviço'])
-                
-            else:
-                df = pd.DataFrame([dados], columns= ['ID_Atendimento', 'Cliente', 'Serviço', 'Data', 'Funcionário', 'Valor Total do Serviço'])
+            # Verificar o número de colunas no resultado
+            cursor.execute('PRAGMA table_info(Atendimento);')  # Isso retorna as colunas da tabela Atendimento
+            colunas_db = cursor.fetchall()  # Recebe os detalhes das colunas
+            colunas = [col[1] for col in colunas_db]  #col[1] retorna o nome das coluna.
+                                                      #PRAGMA(comando do SQLite), tras informações de cada coluna, 0 é o  numero dela, 2 o nome, 3 tipo, 4 se é null ou nao e 4 se é PK ou nao
+            
+            df = pd.DataFrame(dados, columns=colunas)
             
             df.to_excel(caminho_completo, index=False)
             print(f'Dados exportados para {caminho_completo}')
@@ -128,3 +149,4 @@ def Exportar_Dados_Excel():
         else:
             print('Não há dados registrados.')
             break
+    conexao.close()
