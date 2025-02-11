@@ -3,7 +3,7 @@ from Cadastro_Funcionario import menu_funcionarios
 from Cadastro_Produto import menu_produto
 from Cadastro_Servico import menu_servico
 from Atendimento import Menu_Atendimento
-from pendencias import Verificar_Servicos_Pendentes
+from pendencias import Menu_Pendencias, Verificar_Servicos_Pendentes
 import schedule                                     #essa função determina um tempo que outra função pode ser executada automaticamente
 import os
 
@@ -13,7 +13,8 @@ def limpar_tela():
     if sistema == 'nt':  # os.name retorna 'nt' que faz a verificação da tela 
         os.system('cls')    #A função os.system('cls') chama o comando cls para limpar a tela.
 
-schedule.every(10).minutes.do(Verificar_Servicos_Pendentes)  #a função é verificada a cada 10 minutos
+schedule.every(1).hours.do(Verificar_Servicos_Pendentes)  #a função é verificada a cada 1 hora, essa aqui faz o agendamento
+schedule.run_pending()                                      #já essa função, faz o agendamento ser executado
 
 while True:
     limpar_tela()
@@ -39,12 +40,12 @@ while True:
             Menu_Atendimento()
             
         elif escolha == 6:
-            print('pendencias')
+            Menu_Pendencias()
             
         elif escolha == 7:
             input('Pressione Enter para fechar o Programa...')
             exit()
-            
+                 
     except ValueError:
         print('Valor Inválido. Tente novamente')
         

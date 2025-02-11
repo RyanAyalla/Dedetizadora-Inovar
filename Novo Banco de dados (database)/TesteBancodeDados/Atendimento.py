@@ -12,7 +12,7 @@ cursor = conexao.cursor()
 
 def Menu_Atendimento():
     while True:
-        escolha_atendimento = input('1. Novo Atendimento \n2. Atendimentos em Execução \n3. Atendimentos Concluídos \n4. Menu Anterior \n')
+        escolha_atendimento = input('1. Novo Atendimento \n2. Exportar Dados para o Excel \n3. Menu Anterior \n')
         
         if escolha_atendimento.isdigit():  # Verifica se a entrada é numérica
             escolha_atendimento = int(escolha_atendimento)
@@ -21,13 +21,10 @@ def Menu_Atendimento():
                 Registrar_Atendimento()
                 
             elif escolha_atendimento == 2:
-                print("Atendimentos em Execução.")
+                Exportar_Dados_Excel()
             
             elif escolha_atendimento == 3:
-                print("Atendimentos Concluídos")
-            
-            elif escolha_atendimento == 4:
-                Exportar_Dados_Excel()
+                return
             
             else:
                 print('Opção Inválida')
