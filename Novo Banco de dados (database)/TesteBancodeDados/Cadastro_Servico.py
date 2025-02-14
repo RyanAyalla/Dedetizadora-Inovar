@@ -1,16 +1,19 @@
-import sqlite3
+import psycopg2
 import pandas as pd
 import os
 from datetime import datetime
 from Validacoes import validar_preco
 
-# O arquivo do banco precisa ser consultado com o final '.db'
-caminho_do_banco = r'C:\Users\Dev\Novo Banco de dados (database)\Dedetizadora Inovar.db'
-conexao = sqlite3.connect(caminho_do_banco)
-cursor = conexao.cursor()
+conn = psycopg2.connect(
+    dbname = "postgres",
+    user = "postgres",
+    password = "ryan1234",
+    host = "localhost",
+    port = "5432"
+)
+cursor = conn.cursor()
 
 def Dados_Servico():
-    # Função para cadastrar um novo serviço
 
     while True:
         Tipo = str(input('Tipo de Serviço (Máximo 100 caracteres): '))
@@ -66,13 +69,11 @@ def Dados_Servico():
         except ValueError:
             print("Valor inválido, tente novamente.")
     
-    # Inserindo os dados nas colunas da tabela
-    consulta = '''INSERT INTO Servico (Tipo, Descricao, Preco, Intervalo_Servico)
-                  VALUES (?, ?, ?, ?)'''
+    consulta = '''INSERT INTO servico (tipo, descricao, preco, intervalo_servico)
+                  VALUES (%s, %s, %s, %s)'''
 
-    # As variáveis substituem os ? (placeholders) na consulta SQL
     cursor.execute(consulta, (Tipo, Descricao, preco, Intervalo_Servico))
-    conexao.commit()
+    cursor.connection.commit()
     
 def mostrar_dados_servico():
     while True:
@@ -91,7 +92,7 @@ def mostrar_dados_servico():
                 break  # Sai do loop se o usuário não quiser tentar novamente
 
     if opcao == '1':  # Exibir todos os servicos
-        consulta = 'SELECT * FROM Servico'
+        consulta = 'SELECT * FROM servico'
         cursor.execute(consulta)
         dados = cursor.fetchall()  # Recupera todos os serviços
         
@@ -106,7 +107,7 @@ def mostrar_dados_servico():
         while True:
             try:
                 numero_produto = int(input('Número do Serviço (ID): \n'))
-                consulta = 'SELECT * FROM Servico WHERE ID_Servico = ?'
+                consulta = 'SELECT * FROM servico WHERE id_servico = %s'
                 cursor.execute(consulta, (numero_produto,))  #o segundo parametro fica assim e com a virgula para o python interpretalo como uma tupla. Ele precisa ser uma tupla.
                 dados = cursor.fetchone()  # Recupera um serviço específico
                 
@@ -123,7 +124,7 @@ def mostrar_dados_servico():
                     break  
     if opcao == '3':
         # Consulta para buscar todos os clientes
-        consulta = 'SELECT * FROM Servico'
+        consulta = 'SELECT * FROM servico'
         cursor.execute(consulta)
         dados = cursor.fetchall()  # Retorna todos os dados como uma lista de listas
         
@@ -141,14 +142,14 @@ def apagar_dados_servico():
             apagar = int(input('Digite o ID do Serviço que deseja apagar: '))
 
             # Primeiro, usamos o COUNT(*) para verificar se o Serviço existe, se sim, ele irá retornar 1, se não, irá retornar 0. O dado vai para a variavel 'resultado'
-            consulta_verificar = 'SELECT COUNT(*) FROM Servico WHERE ID_Servico = ?'
+            consulta_verificar = 'SELECT COUNT(*) FROM servico WHERE id_servico = %s'
             cursor.execute(consulta_verificar, (apagar,))
             resultado = cursor.fetchone()
 
             if resultado[0] > 0:  # Se o Serviço existe, o resultado será maior que 0
-                consulta = 'DELETE FROM Servico WHERE ID_Servico = ?'
+                consulta = 'DELETE FROM servico WHERE id_servico = %s'
                 cursor.execute(consulta, (apagar,))
-                conexao.commit()  # Confirma a mudança na tabela, pois iremos modificar ela
+                cursor.connection.commit()  # Confirma a mudança na tabela, pois iremos modificar ela
                 print('Serviço apagado.')
                 break 
             else:

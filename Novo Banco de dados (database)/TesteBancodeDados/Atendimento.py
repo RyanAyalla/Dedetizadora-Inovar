@@ -1,14 +1,19 @@
-import sqlite3
+import psycopg2
 import os
 import pandas as pd
 from datetime import datetime
 from Validacoes import validar_preco
 
 
-caminho_do_banco = r'C:\Users\Dev\Novo Banco de dados (database)\Dedetizadora Inovar.db'  # Podemos usar duas \\ invertidas aqui ou o r (string raw) para o Python não tratar a \ como prefixo de escape
-conexao = sqlite3.connect(caminho_do_banco)
-cursor = conexao.cursor()
+conn = psycopg2.connect(
+    dbname = "postgres",
+    user = "postgres",
+    password = "ryan1234",
+    host = "localhost",
+    port = "5432"
+)
 
+cursor = conn.cursor()
 
 def Menu_Atendimento():
     while True:
@@ -39,7 +44,7 @@ def Registrar_Atendimento():
     while True:
         try:
             id_servico = int(input('Digite o ID do Serviço prestado: '))
-            consulta_servico = 'SELECT * FROM Servico WHERE ID_Servico = ?'
+            consulta_servico = 'SELECT * FROM servico WHERE id_servico = %s'
             cursor.execute(consulta_servico, (id_servico,))
             servico = cursor.fetchone()
             if servico:
@@ -53,7 +58,7 @@ def Registrar_Atendimento():
     while True:
         try:
             id_funcionario = int(input('Digite o ID do Funcionário que prestará o serviço: '))
-            consulta_servico = 'SELECT * FROM Funcionarios WHERE ID_Funcionario = ?'
+            consulta_servico = 'SELECT * FROM funcionarios WHERE id_funcionario = %s'
             cursor.execute(consulta_servico, (id_funcionario,))
             funcionario = cursor.fetchone()
             if funcionario:
@@ -68,7 +73,7 @@ def Registrar_Atendimento():
     while True:
         try:
             id_cliente = int(input('Digite o ID do Cliente onde o serviço será prestado: '))
-            consulta_servico = 'SELECT * FROM Cliente WHERE ID_Cliente = ?'
+            consulta_servico = 'SELECT * FROM cliente WHERE id_cliente = %s'
             cursor.execute(consulta_servico, (id_cliente,))
             cliente = cursor.fetchone()
             if cliente:
@@ -94,33 +99,32 @@ def Registrar_Atendimento():
     # Inserir o atendimento com a data atual
     data_atendimento = datetime.now().strftime('%Y-%m-%d')
     
-    inserir_dados_atendimento = ''' INSERT INTO Atendimento (ID_Cliente, ID_Servico, Data, ID_Funcionario, Valor_Total, Execucao) 
-                                    VALUES (?, ?, ?, ?, ?, ?)
+    inserir_dados_atendimento = ''' INSERT INTO atendimento (id_cliente, id_servico, data, id_funcionario, valor_total, execucao) 
+                                    VALUES (%s, %s, %s, %s, %s, %s)
     
     '''
     cursor.execute(inserir_dados_atendimento, (id_cliente, id_servico, data_atendimento, id_funcionario, preco_atendimento, Execucao))
-    conexao.commit()
+    cursor.connection.commit()
     
     
     
     #AQUI VAMOS VERIFICAR SE O SERVIÇO TEM INTERVALO, SE ELE TIVER, IRA ADICIONAR A DATA ATUAL NA COLUNA (DATA_ULTIMO_ATENDIMENTO NO SQL)
-    cursor.execute('SELECT Intervalo_Servico FROM Servico WHERE ID_Servico = ?', (id_servico,))
+    cursor.execute('SELECT intervalo_servico FROM servico WHERE id_servico = %s', (id_servico,))
     consulta_intervalo = cursor.fetchone()
     
     #se tiver um intervalo, um UPDATE na coluna Data_Ultimo_Atendimento é feito, para que assim futuramente, a verificação com ela seja feita.
     if consulta_intervalo and consulta_intervalo[0]: #consulta_intervalo[0] verifica se o valor do primeiro item da tupla retornada não é "false" (nulo, zero, etc.). 
-        consulta_data_atendimento = '''UPDATE Atendimento SET Data_Ultimo_Atendimento = ? WHERE ID_Servico = ?
+        consulta_data_atendimento = '''UPDATE atendimento SET data_ultimo_atendimento = %s WHERE id_servico = %s
         '''
         cursor.execute(consulta_data_atendimento, (data_atendimento, id_servico))
-        conexao.commit()
+        cursor.connection.commit()
         
-    conexao.close()
     
 def Exportar_Dados_Excel():
     
     while True:
         
-        consulta = 'SELECT * FROM Atendimento'
+        consulta = 'SELECT * FROM atendimento'
         cursor.execute(consulta)
         dados = cursor.fetchall() 
         
@@ -132,12 +136,9 @@ def Exportar_Dados_Excel():
             
             caminho_completo = os.path.join(caminho_diretorio, 'Dados_Atendimento.xlsx')
 
-            # Verificar o número de colunas no resultado
-            cursor.execute('PRAGMA table_info(Atendimento);')  # Isso retorna as colunas da tabela Atendimento
-            colunas_db = cursor.fetchall()  # Recebe os detalhes das colunas
-            colunas = [col[1] for col in colunas_db]  #col[1] retorna o nome das coluna.
-                                                      #PRAGMA(comando do SQLite), tras informações de cada coluna, 0 é o  numero dela, 2 o nome, 3 tipo, 4 se é null ou nao e 4 se é PK ou nao
-            
+            cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'atendimento';")
+            colunas_db = cursor.fetchall()
+            colunas = [col[0] for col in colunas_db]  # [0] retorna o nome das colunas
             df = pd.DataFrame(dados, columns=colunas)
             
             df.to_excel(caminho_completo, index=False)
@@ -146,4 +147,4 @@ def Exportar_Dados_Excel():
         else:
             print('Não há dados registrados.')
             break
-    conexao.close()
+    cursor.connection.close()

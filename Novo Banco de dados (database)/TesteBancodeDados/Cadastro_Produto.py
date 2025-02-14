@@ -1,15 +1,19 @@
-import sqlite3
+import psycopg2
 import pandas as pd
 import os
 from Validacoes import validar_preco
 
-# O arquivo do banco precisa ser consultado com o final '.db'
-caminho_do_banco = r'C:\Users\Dev\Novo Banco de dados (database)\Dedetizadora Inovar.db'  # Podemos usar duas \\ invertidas aqui ou o r (string raw) para o Python não tratar a \ como prefixo de escape
-conexao = sqlite3.connect(caminho_do_banco)
-cursor = conexao.cursor()
+conn = psycopg2.connect(
+    dbname = "postgres",
+    user = "postgres",
+    password = "ryan1234",
+    host = "localhost",
+    port = "5432"
+)
+
+cursor = conn.cursor()
 
 def Dados_Produto():
-    # Função para cadastrar um novo produto
 
     while True:
         Nome = str(input('Nome do Produto (Máximo de 50 caracteres): '))
@@ -30,32 +34,20 @@ def Dados_Produto():
     while True:
         try:
             preco = float(input('Preço do produto (formato: 10.99): '))
-            # Verificar se o preço é maior que 0
             if preco < 0:
                 print('O preço deve ser maior que 0.')
             else:
-                # Validar o preço com a função
+
                 if validar_preco(preco):
-                    break  # Sai do loop quando o preço está válido
+                    break  
         except ValueError:
             print('Valor inválido. Digite um valor válido para o preço.')
 
-    # Inserindo os dados nas colunas da tabela
-    consulta = '''INSERT INTO Produto (Nome, Descricao, Preco)
-                  VALUES (?, ?, ?)'''
-
-    # As variáveis substituem os ? (placeholders) na consulta SQL
+    consulta = '''INSERT INTO produto (nome, descricao, preco)
+                  VALUES (%s, %s, %s)'''
     cursor.execute(consulta, (Nome, Descricao, preco))
-
-    # Para confirmar as alterações no banco de dados
-    conexao.commit()
-
-    # Mensagem de sucesso
+    cursor.connection.commit()
     print("Cadastro de produto realizado com sucesso!")
-
-# Não feche a conexão e o cursor aqui, pois você pode querer usá-los em outro momento.
-# Deixe a conexão aberta para o uso posterior, fechando-a no final do programa principal.
-# conexao.close()
 
 
 def mostrar_dados_produto():
@@ -75,7 +67,7 @@ def mostrar_dados_produto():
                 break  # Sai do loop se o usuário não quiser tentar novamente
 
     if opcao == '1':  # Exibir todos os produtos
-        consulta = 'SELECT * FROM Produto'
+        consulta = 'SELECT * FROM produto'
         cursor.execute(consulta)
         dados = cursor.fetchall()  # Recupera todos os produtos
         
@@ -86,13 +78,13 @@ def mostrar_dados_produto():
         else:
             print('Nenhum dado encontrado na Tabela Produtos')
 
-    if opcao == '2':  # Exibir um produto específico
+    if opcao == '2': 
         while True:
             try:
                 numero_produto = int(input('Número do Produto (ID): \n'))
-                consulta = 'SELECT * FROM Produto WHERE ID_Produto = ?'
-                cursor.execute(consulta, (numero_produto,))  # #o segundo parametro fica assim e com a virgula para o python interpretalo como uma tupla. Ele precisa ser uma tupla.
-                dados = cursor.fetchone()  # Recupera um produto específico
+                consulta = 'SELECT * FROM produto WHERE id_produto = %s'
+                cursor.execute(consulta, (numero_produto,))
+                dados = cursor.fetchone() 
                 
                 if dados:  
                     print(f'ID_Produto: {dados[0]}, Nome: {dados[1]}, Descrição: {dados[2]}, Preço: {dados[3]}, Quantidade_Estoque: {dados[4]}')
@@ -107,7 +99,7 @@ def mostrar_dados_produto():
                     break  
     if opcao == '3':
         # Consulta para buscar todos os clientes
-        consulta = 'SELECT * FROM Produto'
+        consulta = 'SELECT * FROM produto'
         cursor.execute(consulta)
         dados = cursor.fetchall()  # Retorna todos os dados como uma lista de listas
         
@@ -125,14 +117,14 @@ def apagar_dados_produto():
             apagar = int(input('Digite o ID do Produto que deseja apagar: '))
 
             # Primeiro, usamos o COUNT(*) para verificar se o Produto existe, se sim, ele irá retornar 1, se não, irá retornar 0. O dado vai para a variavel 'resultado'
-            consulta_verificar = 'SELECT COUNT(*) FROM Produto WHERE ID_Produto = ?'
+            consulta_verificar = 'SELECT COUNT(*) FROM produto WHERE id_produto = %s'
             cursor.execute(consulta_verificar, (apagar,))
             resultado = cursor.fetchone()
 
             if resultado[0] > 0:  # Se o produto existe, o resultado será maior que 0
-                consulta = 'DELETE FROM Produto WHERE ID_Produto = ?'
+                consulta = 'DELETE FROM produto WHERE id_produto = %s'
                 cursor.execute(consulta, (apagar,))
-                conexao.commit()  # Confirma a mudança na tabela, pois iremos modificar ela
+                cursor.connection.commit()  
                 print(f'Produto apagado.')
                 break 
             else:

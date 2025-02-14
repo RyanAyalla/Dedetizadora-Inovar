@@ -1,12 +1,17 @@
-import sqlite3
+import psycopg2
 import pandas as pd
 import os
 from Validacoes import validar_telefone, validar_email
 
-# O arquivo do banco precisa ser consultado com o final '.db'
-caminho_do_banco = r'C:\Users\Dev\Novo Banco de dados (database)\Dedetizadora Inovar.db'
-conexao = sqlite3.connect(caminho_do_banco)
-cursor = conexao.cursor()
+conn = psycopg2.connect(
+    dbname = "postgres",
+    user = "postgres",
+    password = "ryan1234",
+    host = "localhost",
+    port = "5432"
+)
+
+cursor = conn.cursor()
 
 def Dados_Funcionario():
     # Função para cadastrar um novo funcionário
@@ -42,12 +47,12 @@ def Dados_Funcionario():
             print("E-mail inválido! Verifique o formato e o tamanho (máximo 100 caracteres).")
 
     # Inserindo os dados nas colunas da tabela
-    consulta = '''INSERT INTO Funcionarios (Nome, Cargo, Telefone, Email)
-                  VALUES (?, ?, ?, ?)'''
+    consulta = '''INSERT INTO funcionarios (nome, cargo, telefone, email)
+                  VALUES (%s, %s, %s, %s)'''
 
     # As variáveis substituem os ? (placeholders) na consulta SQL
     cursor.execute(consulta, (Nome, Cargo, Telefone, email))
-    conexao.commit()
+    cursor.connection.commit()
     
     
 def mostrar_dados_funcionarios():
@@ -67,7 +72,7 @@ def mostrar_dados_funcionarios():
                 break
 
     if opcao == '1':  
-        consulta = 'SELECT * FROM Funcionarios'
+        consulta = 'SELECT * FROM funcionarios'
         cursor.execute(consulta)
         dados = cursor.fetchall()  
         
@@ -82,7 +87,7 @@ def mostrar_dados_funcionarios():
         while True:
             try:
                 numero_produto = int(input('Número do Funcionario (ID): \n'))
-                consulta = 'SELECT * FROM Funcionarios WHERE ID_Funcionario = ?'
+                consulta = 'SELECT * FROM Funcionarios WHERE ID_Funcionario = %s'
                 cursor.execute(consulta, (numero_produto,))  # #o segundo parametro fica assim e com a virgula para o python interpretalo como uma tupla. Ele precisa ser uma tupla.
                 dados = cursor.fetchone()  # Recupera um Funcionario em específico
                 
@@ -100,7 +105,7 @@ def mostrar_dados_funcionarios():
                     break  
     if opcao == '3':
     # Consulta para buscar todos os clientes
-        consulta = 'SELECT * FROM Funcionarios'
+        consulta = 'SELECT * FROM funcionarios'
         cursor.execute(consulta)
         dados = cursor.fetchall()  # Retorna todos os dados como uma lista de listas
         
@@ -118,14 +123,14 @@ def apagar_dados_funcionarios():
             apagar = int(input('Digite o ID do Funcionario que deseja apagar: '))
 
             # Primeiro, usamos o COUNT(*) para verificar se o Funcionário existe, se sim, ele irá retornar 1, se não, irá retornar 0. O dado vai para a variavel 'resultado'
-            consulta_verificar = 'SELECT COUNT(*) FROM Funcionarios WHERE ID_Funcionario = ?'
+            consulta_verificar = 'SELECT COUNT(*) FROM funcionarios WHERE id_funcionario = %s'
             cursor.execute(consulta_verificar, (apagar,))
             resultado = cursor.fetchone()
 
             if resultado[0] > 0:  # Se o Funcionario existe, o resultado será maior que 0
-                consulta = 'DELETE FROM Funcionarios WHERE ID_Funcionario = ?'
+                consulta = 'DELETE FROM funcionarios WHERE id_funcionario = %s'
                 cursor.execute(consulta, (apagar,))
-                conexao.commit()  # Confirma a mudança na tabela, pois iremos modificar ela
+                cursor.connection.commit()  # Confirma a mudança na tabela, pois iremos modificar ela
                 print(f'Funcionário apagado.')
                 break 
             else:

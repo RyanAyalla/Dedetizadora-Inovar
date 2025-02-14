@@ -1,14 +1,16 @@
-import sqlite3
+import psycopg2
 import pandas as pd
 import os
 from Validacoes import validar_telefone, validar_email, validar_cnpj, validar_cpf
 
-# O arquivo do banco precisa ser consultado com o final '.db'
-caminho_do_banco = r'C:\Users\Dev\Novo Banco de dados (database)\Dedetizadora Inovar.db'  # Podemos usar duas \\ invertidas aqui ou o r (string raw) para o Python não tratar a \ como prefixo de escape
-
-# Conexão com o banco de dados
-conexao = sqlite3.connect(caminho_do_banco)
-cursor = conexao.cursor()
+conn = psycopg2.connect(
+    dbname = "postgres",
+    user = "postgres",
+    password = "ryan1234",
+    host = "localhost",
+    port = "5432"
+)
+conexao = conn.cursor()
 
 def Dados_Cliente():
 
@@ -53,12 +55,12 @@ def Dados_Cliente():
                 print('CPF ou CNPJ incorretos, digite novamente.')
 
     # Inserindo os dados nas colunas da tabela
-    consulta = '''INSERT INTO Cliente (Nome, CPF_CNPJ, Endereco, Telefone, Email)
-                  VALUES (?, ?, ?, ?, ?)'''
+    consulta = '''INSERT INTO cliente (nome, cpf_cnpj, endereco, telefone, email)
+                  VALUES (%s, %s, %s, %s, %s)'''
 
     # As variáveis substituem os ? (placeholders) na consulta SQL
-    cursor.execute(consulta, (Nome, CPF_CNPJ, Endereco, Telefone, email))
-    conexao.commit()
+    conexao.execute(consulta, (Nome, CPF_CNPJ, Endereco, Telefone, email))
+    conexao.connection.commit()
     print("Cadastro de Cliente realizado com sucesso!")
     
     input('Pressione Enter para sair...\n')
@@ -84,9 +86,9 @@ def mostrar_dados_cliente():
                 break  # Sai do loop se o usuário não quiser tentar novamente
 
     if opcao == '1':  
-        consulta = 'SELECT * FROM Cliente'
-        cursor.execute(consulta)
-        dados = cursor.fetchall()  
+        consulta = 'SELECT * FROM cliente'
+        conexao.execute(consulta)
+        dados = conexao.fetchall()  
         
         if dados:
             print("Dados dos Clientes")
@@ -99,9 +101,9 @@ def mostrar_dados_cliente():
         while True:
             try:
                 numero_produto = int(input('Número do Cliente (ID): \n'))
-                consulta = 'SELECT * FROM Cliente WHERE ID_Cliente = ?'
-                cursor.execute(consulta, (numero_produto,))  # #o segundo parametro fica assim e com a virgula para o python interpretalo como uma tupla. Ele precisa ser uma tupla.
-                dados = cursor.fetchone()  # Recupera um Cliente em específico
+                consulta = 'SELECT * FROM cliente WHERE id_cliente = %s'
+                conexao.execute(consulta, (numero_produto,))  # #o segundo parametro fica assim e com a virgula para o python interpretalo como uma tupla. Ele precisa ser uma tupla.
+                dados = conexao.fetchone()  # Recupera um Cliente em específico
                 
                 if dados:  #aqui usamos dados ao inves de linha, pois é um dados de uma liha, não varias linhas com varios dados como lá em cima
                     print(f'ID_Cliente: {dados[0]}, CPF/CNPJ: {dados[1]}, Endereço: {dados[2]}, Telefone: {dados[3]}, Email: {dados[4]}')
@@ -118,9 +120,9 @@ def mostrar_dados_cliente():
         
     if opcao == '3':
         # Consulta para buscar todos os clientes
-        consulta = 'SELECT * FROM Cliente'
-        cursor.execute(consulta)
-        dados = cursor.fetchall()  # Retorna todos os dados como uma lista de listas
+        consulta = 'SELECT * FROM cliente'
+        conexao.execute(consulta)
+        dados = conexao.fetchall()  # Retorna todos os dados como uma lista de listas
         
         if dados:
             # Chama a função para exportar os dados para um arquivo Excel
@@ -137,15 +139,16 @@ def apagar_dados_cliente():
             apagar = int(input('Digite o ID do Cliente que deseja apagar: '))
 
             # Primeiro, usamos o COUNT(*) para verificar se o Cliente existe, se sim, ele irá retornar 1, se não, irá retornar 0. O dado vai para a variavel 'resultado'
-            consulta_verificar = 'SELECT COUNT(*) FROM Cliente WHERE ID_Cliente = ?'
-            cursor.execute(consulta_verificar, (apagar,))
-            resultado = cursor.fetchone()
+            consulta_verificar = 'SELECT COUNT(*) FROM cliente WHERE id_cliente = %s'
+            conexao.execute(consulta_verificar, (apagar,))
+            resultado = conexao.fetchone()
 
             if resultado[0] > 0:  # Se o Cliente existe, o resultado será maior que 0
-                consulta = 'DELETE FROM Cliente WHERE ID_Cliente = ?'
-                cursor.execute(consulta, (apagar,))
-                conexao.commit()  # Confirma a mudança na tabela, pois iremos modificar ela
+                consulta = 'DELETE FROM cliente WHERE id_cliente = %s'
+                conexao.execute(consulta, (apagar,))
+                conexao.connection.commit()  # Confirma a mudança na tabela, pois iremos modificar ela
                 print(f'Cliente apagado.')
+                conexao.close()
                 break 
             else:
                 print('Cliente não encontrado')

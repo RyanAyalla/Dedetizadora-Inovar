@@ -1,13 +1,17 @@
 from datetime import datetime        #essa biblioteca lida melhor com dias, horas, minutos e segundos. Não tem suporte grande para meses e anos
-import sqlite3
+import psycopg2
 from dateutil.relativedelta import relativedelta #essa biblioteca lida melhor com meses e anos, pois consegue fazer calculos mais sofisticados.
 from plyer import notification
 import os
 
-
-caminho_do_banco = r'C:\Users\Dev\Novo Banco de dados (database)\Dedetizadora Inovar.db'
-conexao = sqlite3.connect(caminho_do_banco)
-cursor = conexao.cursor()
+conn = psycopg2.connect(
+    dbname = "postgres",
+    user = "postgres",
+    password = "ryan1234",
+    host = "localhost",
+    port = "5432"
+)
+cursor = conn.cursor()
 
 def limpar_tela():
     sistema = os.name
@@ -22,18 +26,18 @@ def Verificar_Servicos_Pendentes ():
     qnd_ser_pendentes = 0
                                                 #lembra sempre de indicar qual abreviação das tabelas são de qual coluna e vice versa
     consulta_servicos_pendentes = ''' SELECT 
-    a.ID_Atendimento, 
-    a.ID_Servico, 
-    s.Intervalo_Servico, 
-    a.Data_Ultimo_Atendimento
+    a.id_atendimento, 
+    a.id_servico, 
+    s.intervalo_servico, 
+    a.data_ultimo_atendimento
 FROM 
-    Atendimento a
+    atendimento a
 INNER JOIN 
-    Servico s
+    servico s
 ON 
-    a.ID_Servico = s.ID_Servico
+    a.id_servico = s.id_servico
 WHERE 
-    a.Data_Ultimo_Atendimento IS NOT NULL AND a.Execucao = 'Andamento';
+    a.data_ultimo_atendimento IS NOT NULL AND a.execucao = 'Andamento';
     '''
     cursor.execute(consulta_servicos_pendentes)
     servicos_pendentes = cursor.fetchall()
@@ -88,9 +92,9 @@ def Concluir_Pendencia():
             if escolha_pendencia.isdigit():
                 escolha_pendencia = int(escolha_pendencia)
             
-            consulta_pendencia = '''SELECT a.ID_Atendimento, c.Nome, a.Execucao
-                                    FROM Atendimento a JOIN Cliente c ON a.ID_Cliente = c.ID_Cliente
-                                    WHERE a.ID_Atendimento = ?
+            consulta_pendencia = '''SELECT a.id_atendimento, c.nome, a.execucao
+                                    FROM atendimento a JOIN cliente c ON a.id_cliente = c.id_cliente
+                                    WHERE a.id_atendimento = %s
             '''
             cursor.execute(consulta_pendencia, (escolha_pendencia,))
             resultado_pendencia = cursor.fetchone()
@@ -106,11 +110,11 @@ def Concluir_Pendencia():
                             break
                         
                         if escolha_modificacao == 'S':
-                            pendencia_update = '''UPDATE Atendimento SET Execucao = ? WHERE ID_Atendimento = ? 
+                            pendencia_update = '''UPDATE Atendimento SET Execucao = %s WHERE ID_Atendimento = %s 
                             '''
                             
                             cursor.execute(pendencia_update, ('Concluido', escolha_pendencia))
-                            conexao.commit()
+                            cursor.connection.commit()
                             
                             print("Atendimento Marcado como 'Concluído'.")
                             input('Aperte Enter para sair...')
