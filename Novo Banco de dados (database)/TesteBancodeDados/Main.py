@@ -4,8 +4,11 @@ from Cadastro_Produto import menu_produto
 from Cadastro_Servico import menu_servico
 from Atendimento import Menu_Atendimento
 from pendencias import Menu_Pendencias, Verificar_Servicos_Pendentes
+from autenticacao import entrar_conta
 import schedule                                     #essa função determina um tempo que outra função pode ser executada automaticamente
 import os
+
+
 
 def limpar_tela():
     sistema = os.name
@@ -15,6 +18,8 @@ def limpar_tela():
 
 schedule.every(1).hours.do(Verificar_Servicos_Pendentes)  #a função é verificada a cada 1 hora, essa aqui faz o agendamento
 schedule.run_pending()                                      #já essa função, faz o agendamento ser executado
+
+entrar_conta()
 
 while True:
     limpar_tela()
